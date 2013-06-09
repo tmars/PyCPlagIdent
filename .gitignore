@@ -1,9 +1,4 @@
 *.pyc
 *~
-c_files/*
-!c_files/col1
-out/*
-data/db.db
-data/log.log
 yacctab.py
 lextab.py
