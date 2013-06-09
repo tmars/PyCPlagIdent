@@ -1,8 +1,7 @@
 import sys
 from analyzer_base import Analyzer
 from config_container import Config
-from libs.munkres import Munkres, print_matrix, make_cost_matrix
-from logger import Logger
+from libs.munkres import Munkres, make_cost_matrix
 
 class DetailedAnalyzer(Analyzer):
 
@@ -43,13 +42,13 @@ class DetailedAnalyzer(Analyzer):
         sim += Config.get('detailed.ret_type_power') * ret_type_sim
         sim += Config.get('detailed.args_vars_power') * args_vars_sim
 
-        Logger.info("ctrl_type_sim = %f" % (ctrl_type_sim))
-        Logger.info("ctrl_type_sim = %f" % (ctrl_type_sim))
-        Logger.info("ctrl_seq_sim = %f" % (ctrl_seq_sim))
-        Logger.info("loc_vars_sim = %f" % (loc_vars_sim))
-        Logger.info("ret_type_sim = %f" % (ret_type_sim))
-        Logger.info("args_vars_sim = %f" % (args_vars_sim))
-        Logger.info("detailed.sim_functions(%s, %s) = %f" % (func1.name, func2.name, sim))
+        self._log("ctrl_type_sim = %f" % (ctrl_type_sim))
+        self._log("ctrl_type_sim = %f" % (ctrl_type_sim))
+        self._log("ctrl_seq_sim = %f" % (ctrl_seq_sim))
+        self._log("loc_vars_sim = %f" % (loc_vars_sim))
+        self._log("ret_type_sim = %f" % (ret_type_sim))
+        self._log("args_vars_sim = %f" % (args_vars_sim))
+        self._log("detailed.sim_functions(%s, %s) = %f" % (func1.name, func2.name, sim))
 
         return sim
 
@@ -90,9 +89,9 @@ class DetailedAnalyzer(Analyzer):
         sim += Config.get('detailed.headers_power') * headers_sim
         sim += Config.get('detailed.funcs_power') * funcs_sim
 
-        Logger.info("headers_sim = %f" % headers_sim)
-        Logger.info("glob_vars_sim = %f" % glob_vars_sim)
-        Logger.info("funcs_sim = %f" % funcs_sim)
-        Logger.info("detailed.sim_programs(%s, %s) = %f" % (prog1.name, prog1.name, sim))
+        self._log("headers_sim = %f" % headers_sim)
+        self._log("glob_vars_sim = %f" % glob_vars_sim)
+        self._log("funcs_sim = %f" % funcs_sim)
+        self._log("detailed.sim_programs(%s, %s) = %f" % (prog1.name, prog1.name, sim))
 
         return sim

@@ -4,6 +4,8 @@ import sc.parser as sc_parser
 from sim_analyzer.detailed import DetailedAnalyzer
 from sim_analyzer.fast import FastAnalyzer
 from detector import PlagiarismDetector
+from logger import Logger
+from repository import Repository
 
 #####################################
 
@@ -87,9 +89,18 @@ for opt,arg in opts:
 
 #####################################
 
+logger = Logger('data/log.log')
+
 fast_analizer = FastAnalyzer()
+fast_analizer.set_logger(logger)
+
 detailed_analizer = DetailedAnalyzer()
-detector = PlagiarismDetector(0.5, 0.8, fast_analizer, detailed_analizer)
+detailed_analizer.set_logger(logger)
+
+repo = Repository()
+detector = PlagiarismDetector(fast_analizer, detailed_analizer, repo)
+detector.set_logger(logger)
+detector.set_minimal_sim_values(0.5, 0.8)
 
 #####################################
 
@@ -114,7 +125,6 @@ if find_progs and target_progs:
 
 if find_funcs and target_progs:
     print u'Поиск схожих функций:'
-
 
     for target_prog in target_progs:
         for target in target_prog.functions:

@@ -1,21 +1,26 @@
 import time, os
 from config_container import Config
-from repository import Repository
-from logger import Logger
 from sc.extractor import SCExtractor
 
 width = 60
 
 class PlagiarismDetector(object):
-    def __init__(self, fast_min_sim, detailed_min_sim, first_analyzer, second_analyzer):
-        self.__fast_min_sim = fast_min_sim
-        self.__first_analyzer = first_analyzer
-        self.__second_analyzer = second_analyzer
-        self.__detailed_min_sim = detailed_min_sim
-        self.__repo = Repository()
-        self.__prog_canditates = None
+    def __init__(self, fast_analyzer, detailed_analyzer, repo):
+        self.__fast_analyzer = fast_analyzer
+        self.__fast_min_sim = 0.5
+
+        self.__detailed_analyzer = detailed_analyzer
+        self.__detailed_min_sim = 0.8
+
+        self.__logger = None
+
+        self.__repo = repo
         self.__prog_canditates = self.__repo.get_programs()
         self.__func_canditates = self.__repo.get_functions()
+
+    def __log(self, string):
+        if self.__logger:
+            self.__logger.info(string)
 
     def __write_comment(self, fil, strings):
         fil.write("/*" + ("*" * width) + "*/\n")
@@ -41,60 +46,67 @@ class PlagiarismDetector(object):
         text = SCExtractor.extract_function(prog.source_code, func.name)
         return text
 
-    def select_result(self, canditates, target, sim_func, min_sim_value = 0.8):
+    def set_logger(self, logger):
+        self.__logger = logger
+
+    def set_minimal_sim_values(self, fast_min_sim, detailed_min_sim):
+        self.__fast_min_sim = fast_min_sim
+        self.__detailed_min_sim = detailed_min_sim
+
+    def __select_result(self, canditates, target, sim_func, min_sim_value = 0.8):
         result = []
 
         for obj in canditates:
             sim = sim_func(obj, target)
 
-            Logger.info("sim %s([%s], [%s]) = %f" % (type(obj), obj.name, target.name, sim))
+            self.__log("sim %s([%s], [%s]) = %f" % (type(obj), obj.name, target.name, sim))
 
             if sim > min_sim_value:
                 result.append(obj)
 
         return result
 
-    #return [(prog, func, first_similiraty, second_similiraty)]
+    #return [(prog, func, fast_similiraty, detailed_similiraty)]
     def find_sim_funcs(self, target):
         canditates = self.__func_canditates
 
         start = time.time()
-        primary = self.select_result(canditates, target, self.__first_analyzer.sim_functions, self.__fast_min_sim)
-        Logger.info("fast analyze from %d functions for %f seconds" % (len(canditates), time.time() - start))
+        primary = self.__select_result(canditates, target, self.__fast_analyzer.sim_functions, self.__fast_min_sim)
+        self.__log("fast analyze from %d functions for %f detaileds" % (len(canditates), time.time() - start))
 
         start = time.time()
-        result = self.select_result(primary, target, self.__second_analyzer.sim_functions, self.__detailed_min_sim)
-        Logger.info("detailed analyze from %d functions for %f seconds" % (len(primary), time.time() - start))
+        result = self.__select_result(primary, target, self.__detailed_analyzer.sim_functions, self.__detailed_min_sim)
+        self.__log("detailed analyze from %d functions for %f detaileds" % (len(primary), time.time() - start))
 
         ret = []
         for func in result:
             prog = self.__repo.get_program(func.prog_id)
-            first = self.__first_analyzer.sim_functions(func, target)
-            second = self.__second_analyzer.sim_functions(func, target)
-            ret.append((prog, func, first, second))
+            fast = self.__fast_analyzer.sim_functions(func, target)
+            detailed = self.__detailed_analyzer.sim_functions(func, target)
+            ret.append((prog, func, fast, detailed))
 
         return ret
 
-    #return [(prog, first_similiraty, second_similiraty)]
+    #return [(prog, fast_similiraty, detailed_similiraty)]
     def find_sim_progs(self, target):
         canditates = self.__prog_canditates
 
         start = time.time()
-        primary = self.select_result(canditates, target, self.__first_analyzer.sim_programs, self.__fast_min_sim)
-        Logger.info("fast analyze from %d programs for %f seconds" % (len(canditates), time.time() - start))
+        primary = self.__select_result(canditates, target, self.__fast_analyzer.sim_programs, self.__fast_min_sim)
+        self.__log("fast analyze from %d programs for %f detaileds" % (len(canditates), time.time() - start))
 
         for prog in primary:
             prog.functions = self.__repo.get_functions(prog.id)
 
         start = time.time()
-        result = self.select_result(primary, target, self.__second_analyzer.sim_programs, self.__detailed_min_sim)
-        Logger.info("detailed analyze from %d programs for %f seconds" % (len(primary), time.time() - start))
+        result = self.__select_result(primary, target, self.__detailed_analyzer.sim_programs, self.__detailed_min_sim)
+        self.__log("detailed analyze from %d programs for %f detaileds" % (len(primary), time.time() - start))
 
         ret = []
         for prog in result:
-            first = self.__first_analyzer.sim_programs(prog, target)
-            second = self.__second_analyzer.sim_programs(prog, target)
-            ret.append((prog, first, second))
+            fast = self.__fast_analyzer.sim_programs(prog, target)
+            detailed = self.__detailed_analyzer.sim_programs(prog, target)
+            ret.append((prog, fast, detailed))
 
         return ret
 
