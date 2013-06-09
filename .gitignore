@@ -1,0 +1,8 @@
+*.pyc
+*~
+c_files/*
+!c_files/col1
+out/*
+data/*
+yacctab.py
+lextab.py
