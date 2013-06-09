@@ -101,7 +101,7 @@ if find_progs and target_progs:
         data = detector.find_sim_progs(target)
 
         if data:
-            print 'Схожые программы:'
+            print u'Схожые программы:'
             for prog,fast,detail in data:
                 print u'Программа [%s], схожесть = %.2f.' % (prog.name, detail)
 
