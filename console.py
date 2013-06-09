@@ -10,10 +10,26 @@ find_progs = False
 save_program = False
 clear_database = False
 output = False
-out_dir = "out"
+out_dir = 'out'
 in_dir = 'c_files/col1'
 
-opts, args = getopt.getopt(sys.argv[1:], 'i:om:s', ["clear-database"])
+opts, args = getopt.getopt(sys.argv[1:], 'i:om:sh', ['clear-database', 'help'])
+
+def usage():
+    print u"""
+Возможные параметры:
+[-h|--help] - вызов справки
+[-m] - режим поиска плагиата [f|p|a]:
+    f - поиск схожих функций
+    p - поиск схожих программ
+    b - поиск сходих функций и программ
+[-s] - флаг для сохранения найденных программ в базе данных
+[-o] - флаг для выгрузки найденных схожих исходных кодов в папку %s'
+[-i [dir]] - установка папки, для поиска исходных кодов (поиск в папке с_files/[dir])
+             по умолчанию c_files/col1
+[--clear-database] - удаление всех имеющихся в базе данных программ
+""" % out_dir
+
 
 for opt,arg in opts:
     if opt == '-m':
@@ -21,11 +37,11 @@ for opt,arg in opts:
             find_funcs = True
         elif arg == 'p':
             find_progs = True
-        elif arg == 'a':
+        elif arg == 'b':
             find_funcs = True
             find_progs = True
         else:
-            print "Error parameter -m=[f|p|a]"
+            print u'Неправильный режим -m=[f|p|a]'
 
     elif opt == '-s':
         save_program = True
@@ -39,72 +55,68 @@ for opt,arg in opts:
     elif opt == '--clear-database':
         clear_database = True
 
+    elif opt in ('-h', '--help'):
+        usage()
+        sys.exit()
+
 if os.path.exists(in_dir) == False:
-    print "Errror get access to in_dir [%s]" % in_dir
+    print u'Невозможно открыть папку [%s] с исходными кодами программ.' % in_dir
     sys.exit(0)
 
-print "Scaning in_dir[%s] for source code of program..." % in_dir
-
+print u'Поиск исходных текстов в папке [%s]...' % in_dir
 target_progs = sc_parser.scan_for_programs(in_dir)
-print "Finded %d programs.\r\n" % (len(target_progs))
+print u'Найдено %d программ.\r\n' % (len(target_progs))
 
 fast_analizer = FastAnalyzer()
 detailed_analizer = DetailedAnalyzer()
 detector = PlagiarismDetector(0.5, 0.8, fast_analizer, detailed_analizer)
 
 if find_progs:
-    print "Finding similar programs:"
+    print u'Поиск схожих программ:'
 
     for target in target_progs:
-        print "Analize program [%s]..." % target.name
+        print u'Поиск для программы [%s]...' % target.name
         data = detector.find_sim_progs(target)
 
         if data:
-            print "Similar programs:"
-
+            print 'Схожые программы:'
             for prog,fast,detail in data:
-                print "program [%s] fast = %.2f, detail = %.2f" % (prog.name, fast, detail)
+                print u'Программа [%s], схожесть = %.2f.' % (prog.name, detail)
 
             if output:
                 print detector.extract_programs(target, data, out_dir)
-
-
         else:
-            print "Not found."
-
-        print ""
-    print "Done.\r\n"
+            print u'Не найдено.'
+        print ''
+    print u'Завершено.\r\n'
 
 if find_funcs:
-    print "Finding similar functions:"
+    print u'Поиск схожих функций:'
 
     for target_prog in target_progs:
         for target in target_prog.functions:
 
-            print "Analize function [%s][%s]..." % (target_prog.name, target.name)
+            print u'Поиск для функции [%s][%s]...' % (target_prog.name, target.name)
             data = detector.find_sim_funcs(target)
-
             if data:
 
-                print "Similar functions:"
-
+                print u'Схожие функции:'
                 for prog,func,fast,detail in data:
-                    print "function [%s][%s] fast = %.2f, detail = %.2f" % (prog.name, func.name, fast, detail)
+                    print u'Функция [%s][%s], схожесть = %.2f.' % (prog.name, func.name, detail)
 
                 if output:
                     print detector.extract_functions(target_prog, target, data, out_dir)
-
             else:
-                print "Not found."
-            print ""
-    print "Done.\r\n"
+                print u'Не найдено.'
+            print ''
+    print u'Завершено.\r\n'
 
 if save_program:
-    print "Saving program to base..."
+    print u'Сохранение программ в базе данных...'
     detector.save_progs(target_progs)
-    print "Done.\r\n"
+    print u'Завершено.\r\n'
 
 if clear_database:
-    print "Clearing database..."
+    print u'Опустошение базы данных...'
     detector.clear()
-    print "Done.\r\n"
+    print u'Завершено.\r\n'

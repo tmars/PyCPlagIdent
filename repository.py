@@ -8,15 +8,39 @@ db_path = "data\\db.db"
 
 @Singleton
 class DBConn(object):
-    """ ?????????????? ???? ??????
-    """
-    def deploy(self):
+
+    def __init__(self):
+        self.db_path = os.path.abspath(os.curdir) + "\\" + db_path
+
+        if not os.path.exists(self.db_path):
+            self.__conn = sqlite3.connect(self.db_path)
+            self.__deploy()
+        else:
+            self.__conn = sqlite3.connect(self.db_path)
+
+    def __del__(self):
         self.__conn.close()
 
-        print os.path.abspath(os.curdir) + "\\" + db_path
-        os.remove(os.path.abspath(os.curdir) + "\\" + db_path)
+    def __unpack_prog_data(self, data):
+        return ProgramProxy(
+            _id = data[0],
+            name = data[1],
+            source_code = data[2],
+            count_of_control_blocks = data[3],
+            num_of_headers = cPickle.loads(str(data[4])),
+            num_of_control_types = cPickle.loads(str(data[5])),
+            num_of_global_variables = cPickle.loads(str(data[6])),
+            num_of_local_variables = cPickle.loads(str(data[7])),
+        )
+
+    def clear(self):
+        if os.path.exists(self.db_path):
+            print self.db_path
+            os.remove(self.db_path)
 
         self.__init__()
+
+    def __deploy(self):
 
         c = self.__conn.cursor()
 
@@ -49,8 +73,6 @@ class DBConn(object):
 
         self.__conn.commit()
 
-    """ ??????? ????????? ? ?? ???????
-    """
     def insert_program(self, program):
         c = self.__conn.cursor()
         c.execute('''INSERT INTO program (
@@ -93,18 +115,6 @@ class DBConn(object):
         ) VALUES (?,?,?,?,?,?,?)''', functions)
 
         self.__conn.commit()
-
-    def __unpack_prog_data(self, data):
-        return ProgramProxy(
-            _id = data[0],
-            name = data[1],
-            source_code = data[2],
-            count_of_control_blocks = data[3],
-            num_of_headers = cPickle.loads(str(data[4])),
-            num_of_control_types = cPickle.loads(str(data[5])),
-            num_of_global_variables = cPickle.loads(str(data[6])),
-            num_of_local_variables = cPickle.loads(str(data[7])),
-        )
 
     def get_program(self, prog_id):
         c = self.__conn.cursor()
@@ -181,11 +191,5 @@ class DBConn(object):
                 num_of_control_types = cPickle.loads(str(data[7])),
             ))
         return functions
-
-    def __init__(self):
-        self.__conn = sqlite3.connect(db_path)
-
-    def __del__(self):
-        self.__conn.close()
 
 Repo = DBConn.Instance()
