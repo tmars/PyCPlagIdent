@@ -2,12 +2,10 @@
 import sqlite3, os
 import cPickle
 from sc.struct_proxy import *
-from libs.singleton import Singleton
 
 db_path = "data\\db.db"
 
-@Singleton
-class DBConn(object):
+class Repository(object):
 
     def __init__(self):
         self.db_path = os.path.abspath(os.curdir) + "\\" + db_path
@@ -200,5 +198,3 @@ class DBConn(object):
                 num_of_control_types = cPickle.loads(str(data[7])),
             ))
         return functions
-
-Repo = DBConn.Instance()

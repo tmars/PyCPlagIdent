@@ -1,6 +1,6 @@
 import time, os
 from config_container import Config
-from repository import Repo
+from repository import Repository
 from logger import Logger
 from sc.extractor import SCExtractor
 
@@ -12,6 +12,34 @@ class PlagiarismDetector(object):
         self.__first_analyzer = first_analyzer
         self.__second_analyzer = second_analyzer
         self.__detailed_min_sim = detailed_min_sim
+        self.__repo = Repository()
+        self.__prog_canditates = None
+        self.__prog_canditates = self.__repo.get_programs()
+        self.__func_canditates = self.__repo.get_functions()
+
+    def __write_comment(self, fil, strings):
+        fil.write("/*" + ("*" * width) + "*/\n")
+        for string in strings:
+            fil.write("/*" + string.center(width, ' ') + "*/\n")
+        fil.write("/*" + ("*" * width) + "*/\n")
+        fil.write("\n")
+
+    def __open_file(self, filename):
+        fil = open(filename, 'w')
+        fil.write("/*" + ("*" * width) + "*/\n")
+        fil.write("/*" + ("generated with plag_detector V" + Config.get("version")).center(width, ' ') + "*/\n")
+        fil.write("/*" + ("*" * width) + "*/\n")
+        fil.write("\n")
+
+        return fil
+
+    def __extracted_program(self, prog):
+        text = SCExtractor.extract_program(prog.source_code)
+        return text
+
+    def __extracted_function(self, prog, func):
+        text = SCExtractor.extract_function(prog.source_code, func.name)
+        return text
 
     def select_result(self, canditates, target, sim_func, min_sim_value = 0.8):
         result = []
@@ -28,7 +56,7 @@ class PlagiarismDetector(object):
 
     #return [(prog, func, first_similiraty, second_similiraty)]
     def find_sim_funcs(self, target):
-        canditates = Repo.get_functions()
+        canditates = self.__func_canditates
 
         start = time.time()
         primary = self.select_result(canditates, target, self.__first_analyzer.sim_functions, self.__fast_min_sim)
@@ -40,7 +68,7 @@ class PlagiarismDetector(object):
 
         ret = []
         for func in result:
-            prog = Repo.get_program(func.prog_id)
+            prog = self.__repo.get_program(func.prog_id)
             first = self.__first_analyzer.sim_functions(func, target)
             second = self.__second_analyzer.sim_functions(func, target)
             ret.append((prog, func, first, second))
@@ -49,14 +77,14 @@ class PlagiarismDetector(object):
 
     #return [(prog, first_similiraty, second_similiraty)]
     def find_sim_progs(self, target):
-        canditates = Repo.get_programs()
+        canditates = self.__prog_canditates
 
         start = time.time()
         primary = self.select_result(canditates, target, self.__first_analyzer.sim_programs, self.__fast_min_sim)
         Logger.info("fast analyze from %d programs for %f seconds" % (len(canditates), time.time() - start))
 
         for prog in primary:
-            prog.functions = Repo.get_functions(prog.id)
+            prog.functions = self.__repo.get_functions(prog.id)
 
         start = time.time()
         result = self.select_result(primary, target, self.__second_analyzer.sim_programs, self.__detailed_min_sim)
@@ -72,13 +100,13 @@ class PlagiarismDetector(object):
 
     def save_progs(self, progs):
         for prog in progs:
-            Repo.insert_program(prog)
+            self.__repo.insert_program(prog)
 
     def clear(self):
-        return Repo.clear()
+        return self.__repo.clear()
 
     def info(self):
-        return Repo.info()
+        return self.__repo.info()
 
     def extract_programs(self, target, data, out_dir):
         out_dir += "/" + target.name
@@ -134,27 +162,3 @@ class PlagiarismDetector(object):
             self.__write_comment(fil, ["end of function=%s" % (func.name)])
 
         fil.close()
-
-    def __write_comment(self, fil, strings):
-        fil.write("/*" + ("*" * width) + "*/\n")
-        for string in strings:
-            fil.write("/*" + string.center(width, ' ') + "*/\n")
-        fil.write("/*" + ("*" * width) + "*/\n")
-        fil.write("\n")
-
-    def __open_file(self, filename):
-        fil = open(filename, 'w')
-        fil.write("/*" + ("*" * width) + "*/\n")
-        fil.write("/*" + ("generated with plag_detector V" + Config.get("version")).center(width, ' ') + "*/\n")
-        fil.write("/*" + ("*" * width) + "*/\n")
-        fil.write("\n")
-
-        return fil
-
-    def __extracted_program(self, prog):
-        text = SCExtractor.extract_program(prog.source_code)
-        return text
-
-    def __extracted_function(self, prog, func):
-        text = SCExtractor.extract_function(prog.source_code, func.name)
-        return text
