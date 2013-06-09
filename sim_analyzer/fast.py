@@ -32,11 +32,11 @@ class FastAnalyzer(Analyzer):
         sim += Config.get('fast.loc_vars_power') * loc_vars_sim
         sim += Config.get('fast.glob_vars_power') * glob_vars_sim
 
-        self._log("ctrl_type_sim = %f" % (ctrl_type_sim))
-        self._log("headers_sim = %f" % (headers_sim))
-        self._log("loc_vars_sim = %f" % (loc_vars_sim))
-        self._log("glob_vars_sim = %f" % (glob_vars_sim))
-        self._log("fast.sim_programs(%s, %s) = %f" % (prog1.name, prog2.name, sim))
+        self._logger.info("ctrl_type_sim = %f" % (ctrl_type_sim))
+        self._logger.info("headers_sim = %f" % (headers_sim))
+        self._logger.info("loc_vars_sim = %f" % (loc_vars_sim))
+        self._logger.info("glob_vars_sim = %f" % (glob_vars_sim))
+        self._logger.info("fast.sim_programs(%s, %s) = %f" % (prog1.name, prog2.name, sim))
 
         return sim
 
@@ -62,8 +62,8 @@ class FastAnalyzer(Analyzer):
         sim = Config.get('fast.func_ctrl_type_power') * ctrl_type_sim
         sim += Config.get('fast.func_loc_vars_power') * loc_vars_sim
 
-        self._log("ctrl_type_sim = %f" % (ctrl_type_sim))
-        self._log("loc_vars_sim = %f" % (loc_vars_sim))
-        self._log("fast.sim_functions(%s, %s) = %f" % (func1.name, func2.name, sim))
+        self._logger.info("ctrl_type_sim = %f" % (ctrl_type_sim))
+        self._logger.info("loc_vars_sim = %f" % (loc_vars_sim))
+        self._logger.info("fast.sim_functions(%s, %s) = %f" % (func1.name, func2.name, sim))
 
         return sim

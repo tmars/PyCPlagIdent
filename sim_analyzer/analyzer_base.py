@@ -84,11 +84,7 @@ class Analyzer():
     __metaclass__ = ABCMeta
 
     def __init__(self):
-        self.__logger = None
-
-    def _log(self, string):
-        if self.__logger:
-            self.__logger.info(string)
+        self._logger = None
 
     def _simimilarity_dicts(self, matrix1, matrix2):
         if len(matrix1) == 0 and len(matrix2) == 0:
@@ -111,7 +107,7 @@ class Analyzer():
         return sim
 
     def set_logger(self, logger):
-        self.__logger = logger
+        self._logger = logger
 
     @abstractmethod
     def sim_functions(self, func1, func2):

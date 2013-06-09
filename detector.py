@@ -1,8 +1,7 @@
 import time, os
 from config_container import Config
 from sc.extractor import SCExtractor
-
-width = 60
+from sc.decorator import SCFileDecorator
 
 class PlagiarismDetector(object):
     def __init__(self, fast_analyzer, detailed_analyzer, repo):
@@ -17,26 +16,6 @@ class PlagiarismDetector(object):
         self.__repo = repo
         self.__prog_canditates = self.__repo.get_programs()
         self.__func_canditates = self.__repo.get_functions()
-
-    def __log(self, string):
-        if self.__logger:
-            self.__logger.info(string)
-
-    def __write_comment(self, fil, strings):
-        fil.write("/*" + ("*" * width) + "*/\n")
-        for string in strings:
-            fil.write("/*" + string.center(width, ' ') + "*/\n")
-        fil.write("/*" + ("*" * width) + "*/\n")
-        fil.write("\n")
-
-    def __open_file(self, filename):
-        fil = open(filename, 'w')
-        fil.write("/*" + ("*" * width) + "*/\n")
-        fil.write("/*" + ("generated with plag_detector V" + Config.get("version")).center(width, ' ') + "*/\n")
-        fil.write("/*" + ("*" * width) + "*/\n")
-        fil.write("\n")
-
-        return fil
 
     def __extracted_program(self, prog):
         text = SCExtractor.extract_program(prog.source_code)
@@ -59,7 +38,7 @@ class PlagiarismDetector(object):
         for obj in canditates:
             sim = sim_func(obj, target)
 
-            self.__log("sim %s([%s], [%s]) = %f" % (type(obj), obj.name, target.name, sim))
+            self.__logger.info("sim %s([%s], [%s]) = %f" % (type(obj), obj.name, target.name, sim))
 
             if sim > min_sim_value:
                 result.append(obj)
@@ -72,11 +51,11 @@ class PlagiarismDetector(object):
 
         start = time.time()
         primary = self.__select_result(canditates, target, self.__fast_analyzer.sim_functions, self.__fast_min_sim)
-        self.__log("fast analyze from %d functions for %f detaileds" % (len(canditates), time.time() - start))
+        self.__logger.info("fast analyze from %d functions for %f detaileds" % (len(canditates), time.time() - start))
 
         start = time.time()
         result = self.__select_result(primary, target, self.__detailed_analyzer.sim_functions, self.__detailed_min_sim)
-        self.__log("detailed analyze from %d functions for %f detaileds" % (len(primary), time.time() - start))
+        self.__logger.info("detailed analyze from %d functions for %f detaileds" % (len(primary), time.time() - start))
 
         ret = []
         for func in result:
@@ -93,14 +72,14 @@ class PlagiarismDetector(object):
 
         start = time.time()
         primary = self.__select_result(canditates, target, self.__fast_analyzer.sim_programs, self.__fast_min_sim)
-        self.__log("fast analyze from %d programs for %f detaileds" % (len(canditates), time.time() - start))
+        self.__logger.info("fast analyze from %d programs for %f detaileds" % (len(canditates), time.time() - start))
 
         for prog in primary:
             prog.functions = self.__repo.get_functions(prog.id)
 
         start = time.time()
         result = self.__select_result(primary, target, self.__detailed_analyzer.sim_programs, self.__detailed_min_sim)
-        self.__log("detailed analyze from %d programs for %f detaileds" % (len(primary), time.time() - start))
+        self.__logger.info("detailed analyze from %d programs for %f detaileds" % (len(primary), time.time() - start))
 
         ret = []
         for prog in result:
@@ -128,24 +107,27 @@ class PlagiarismDetector(object):
         filename_src = "%s/src.c" %(out_dir)
         filename_sim = "%s/sim.c" %(out_dir)
 
-        fil = self.__open_file(filename_src)
-        self.__write_comment(fil, ["source code of", "target program=%s" % (target.name)])
-        fil.write(self.__extracted_program(target))
-        self.__write_comment(fil, ["end of source code"])
+        src = SCFileDecorator(filename_src)
+        src.write_comment(["generated with %s %s" % (Config.get('package'), Config.get('version'))])
+        src.write_comment(["source code of", "target program=%s" % (target.name)])
+        src.write(self.__extracted_program(target))
+        src.write_comment(["end of source code"])
+        del src
 
-        fil = self.__open_file(filename_sim)
-        self.__write_comment(fil, ["source code of", "similar programs"])
+        src = SCFileDecorator(filename_sim)
+        src.write_comment(["generated with %s %s" % (Config.get('package'), Config.get('version'))])
+        src.write_comment(["source code of", "similar programs"])
 
         for prog,f,s in data:
-            self.__write_comment(fil, [
+            src.write_comment([
                 "program=%s" % (target.name),
                 "f.sim=%f" % (f),
                 "s.sim=%f" % (s),
             ])
-            fil.write(self.__extracted_program(prog))
-            self.__write_comment(fil, ["end of program=%s" % (prog.name)])
+            src.write(self.__extracted_program(prog))
+            src.write_comment(["end of program=%s" % (prog.name)])
 
-        fil.close()
+        del src
 
     def extract_functions(self, target_prog, target, data, out_dir):
         out_dir += "/%s/funcs/%s" % (target_prog.name, target.name)
@@ -155,22 +137,25 @@ class PlagiarismDetector(object):
         filename_src = "%s/src.c" % (out_dir)
         filename_sim = "%s/sim.c" % (out_dir)
 
-        fil = self.__open_file(filename_src)
-        self.__write_comment(fil, ["source code of", "target function=%s" % (target.name)])
-        fil.write(self.__extracted_function(target_prog, target))
-        self.__write_comment(fil, ["end of source code"])
+        src = SCFileDecorator(filename_src)
+        src.write_comment(["generated with %s %s" % (Config.get('package'), Config.get('version'))])
+        src.write_comment(["source code of", "target function=%s" % (target.name)])
+        src.write(self.__extracted_function(target_prog, target))
+        src.write_comment(["end of source code"])
+        del src
 
-        fil = self.__open_file(filename_sim)
-        self.__write_comment(fil, ["source code of", "similar functions"])
+        src = SCFileDecorator(filename_sim)
+        src.write_comment(["generated with %s %s" % (Config.get('package'), Config.get('version'))])
+        src.write_comment(["source code of", "similar functions"])
 
         for prog,func,f,s in data:
-            self.__write_comment(fil, [
+            src.write_comment([
                 "program=%s" % (prog.name),
                 "function=%s" % (func.name),
                 "f.sim=%f" % (f),
                 "s.sim=%f" % (s)
             ])
-            fil.write(self.__extracted_function(prog, func))
-            self.__write_comment(fil, ["end of function=%s" % (func.name)])
+            src.write(self.__extracted_function(prog, func))
+            src.write_comment(["end of function=%s" % (func.name)])
 
-        fil.close()
+        del src

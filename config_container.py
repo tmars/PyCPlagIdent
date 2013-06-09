@@ -24,6 +24,7 @@ class ConfigCont(object):
         config = ConfigParser.RawConfigParser()
         config.read(config_filename)
 
+        self._container['package'] = "PyCPlagIdent"
         self._container['version'] = "0.2"
 
         self._container['max_pointer_count'] = config.getint('DataType', 'max_pointer_count')
