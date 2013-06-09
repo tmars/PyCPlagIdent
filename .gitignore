@@ -3,6 +3,6 @@
 c_files/*
 !c_files/col1
 out/*
-data/*
+data/*.*
 yacctab.py
 lextab.py
