@@ -115,6 +115,7 @@ if find_progs and target_progs:
 if find_funcs and target_progs:
     print u'Поиск схожих функций:'
 
+
     for target_prog in target_progs:
         for target in target_prog.functions:
 
