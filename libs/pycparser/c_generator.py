@@ -310,7 +310,8 @@ class CGenerator(object):
         if typ in (
                 c_ast.Decl, c_ast.Assignment, c_ast.Cast, c_ast.UnaryOp,
                 c_ast.BinaryOp, c_ast.TernaryOp, c_ast.FuncCall, c_ast.ArrayRef,
-                c_ast.StructRef, c_ast.Constant, c_ast.ID, c_ast.Typedef, c_ast.ExprList):
+                c_ast.StructRef, c_ast.Constant, c_ast.ID, c_ast.Typedef,
+                c_ast.ExprList):
             # These can also appear in an expression context so no semicolon
             # is added to them automatically
             #
@@ -400,3 +401,5 @@ class CGenerator(object):
         """
         return isinstance(n,(   c_ast.Constant, c_ast.ID, c_ast.ArrayRef,
                                 c_ast.StructRef, c_ast.FuncCall))
+
+
