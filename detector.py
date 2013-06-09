@@ -75,7 +75,10 @@ class PlagiarismDetector(object):
             Repo.insert_program(prog)
 
     def clear(self):
-        Repo.clear()
+        return Repo.clear()
+
+    def info(self):
+        return Repo.info()
 
     def extract_programs(self, target, data, out_dir):
         out_dir += "/" + target.name

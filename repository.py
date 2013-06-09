@@ -33,13 +33,6 @@ class DBConn(object):
             num_of_local_variables = cPickle.loads(str(data[7])),
         )
 
-    def clear(self):
-        if os.path.exists(self.db_path):
-            print self.db_path
-            os.remove(self.db_path)
-
-        self.__init__()
-
     def __deploy(self):
 
         c = self.__conn.cursor()
@@ -72,6 +65,22 @@ class DBConn(object):
         )")
 
         self.__conn.commit()
+
+    def clear(self):
+        if os.path.exists(self.db_path):
+            print self.db_path
+            self.__conn.close()
+            os.remove(self.db_path)
+
+        self.__init__()
+
+    def info(self):
+        c = self.__conn.cursor()
+
+        prog_count = c.execute('''SELECT COUNT(id) FROM program''').fetchone()[0]
+        func_count =c.execute('''SELECT COUNT(id) FROM function''').fetchone()[0]
+
+        return u'В базе данных сохранено:\r\n\t - программ %d\r\n\t - функций %d' %(prog_count, func_count)
 
     def insert_program(self, program):
         c = self.__conn.cursor()

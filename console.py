@@ -5,15 +5,22 @@ from sim_analyzer.detailed import DetailedAnalyzer
 from sim_analyzer.fast import FastAnalyzer
 from detector import PlagiarismDetector
 
+#####################################
+
 find_funcs = False
 find_progs = False
 save_program = False
-clear_database = False
+
 output = False
 out_dir = 'out'
-in_dir = 'c_files/col1'
 
-opts, args = getopt.getopt(sys.argv[1:], 'i:om:sh', ['clear-database', 'help'])
+in_dir = None
+target_progs = None
+
+db_clear= False
+db_info = False
+
+#####################################
 
 def usage():
     print u"""
@@ -26,10 +33,18 @@ def usage():
 [-s] - флаг для сохранения найденных программ в базе данных
 [-o] - флаг для выгрузки найденных схожих исходных кодов в папку %s'
 [-i [dir]] - установка папки, для поиска исходных кодов (поиск в папке с_files/[dir])
-             по умолчанию c_files/col1
-[--clear-database] - удаление всех имеющихся в базе данных программ
+[--db-info] - информация о базе данных
+[--db-clear] - удаление всех имеющихся в базе данных программ
 """ % out_dir
 
+#####################################
+
+try:
+    opts, args = getopt.getopt(sys.argv[1:], 'i:om:sh', ['db-clear', 'db-info', 'help'])
+except:
+    print u'Неверные параметры'
+    usage()
+    sys.exit(0)
 
 for opt,arg in opts:
     if opt == '-m':
@@ -51,27 +66,34 @@ for opt,arg in opts:
 
     elif opt == '-i':
         in_dir  = 'c_files/' + arg
+        if os.path.exists(in_dir) == False:
+            print u'Невозможно открыть папку [%s] с исходными кодами программ.' % in_dir
+            sys.exit(0)
 
-    elif opt == '--clear-database':
-        clear_database = True
+        else:
+            print u'Поиск исходных текстов в папке [%s]...' % in_dir
+            target_progs = sc_parser.scan_for_programs(in_dir)
+            print u'Найдено %d программ.\r\n' % (len(target_progs))
+
+    elif opt == '--db-clear':
+        db_clear = True
+
+    elif opt == '--db-info':
+        db_info = True
 
     elif opt in ('-h', '--help'):
         usage()
-        sys.exit()
+        sys.exit(0)
 
-if os.path.exists(in_dir) == False:
-    print u'Невозможно открыть папку [%s] с исходными кодами программ.' % in_dir
-    sys.exit(0)
-
-print u'Поиск исходных текстов в папке [%s]...' % in_dir
-target_progs = sc_parser.scan_for_programs(in_dir)
-print u'Найдено %d программ.\r\n' % (len(target_progs))
+#####################################
 
 fast_analizer = FastAnalyzer()
 detailed_analizer = DetailedAnalyzer()
 detector = PlagiarismDetector(0.5, 0.8, fast_analizer, detailed_analizer)
 
-if find_progs:
+#####################################
+
+if find_progs and target_progs:
     print u'Поиск схожих программ:'
 
     for target in target_progs:
@@ -90,7 +112,7 @@ if find_progs:
         print ''
     print u'Завершено.\r\n'
 
-if find_funcs:
+if find_funcs and target_progs:
     print u'Поиск схожих функций:'
 
     for target_prog in target_progs:
@@ -111,12 +133,17 @@ if find_funcs:
             print ''
     print u'Завершено.\r\n'
 
-if save_program:
+if save_program and target_progs:
     print u'Сохранение программ в базе данных...'
     detector.save_progs(target_progs)
     print u'Завершено.\r\n'
 
-if clear_database:
+if db_clear:
     print u'Опустошение базы данных...'
     detector.clear()
+    print u'Завершено.\r\n'
+
+if db_info:
+    print u'Информация о базе данных:'
+    print detector.info()
     print u'Завершено.\r\n'
