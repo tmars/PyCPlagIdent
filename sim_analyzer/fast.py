@@ -5,26 +5,26 @@ class FastAnalyzer(Analyzer):
 
     def sim_programs(self, prog1, prog2):
         headers_sim = self._simimilarity_dicts(
-            prog1.num_of_headers(),
-            prog2.num_of_headers()
+            prog1.get_numbers_of_headers(),
+            prog2.get_numbers_of_headers()
         )
 
         # control types
         ctrl_type_sim = self._simimilarity_dicts(
-            prog1.num_of_control_types(),
-            prog2.num_of_control_types()
+            prog1.get_numbers_of_controls(),
+            prog2.get_numbers_of_controls()
         )
 
         # local variables
         loc_vars_sim = self._simimilarity_dicts(
-            prog1.num_of_local_variables(),
-            prog2.num_of_local_variables()
+            prog1.get_numbers_of_local_vars(),
+            prog2.get_numbers_of_local_vars()
         )
 
         # global variable
         glob_vars_sim = self._simimilarity_dicts(
-            prog1.num_of_global_variables(),
-            prog2.num_of_global_variables()
+            prog1.get_numbers_of_global_vars(),
+            prog2.get_numbers_of_global_vars()
         )
 
         sim = Config.get('fast.ctrl_type_power') * ctrl_type_sim
@@ -36,7 +36,7 @@ class FastAnalyzer(Analyzer):
         self._logger.info("headers_sim = %f" % (headers_sim))
         self._logger.info("loc_vars_sim = %f" % (loc_vars_sim))
         self._logger.info("glob_vars_sim = %f" % (glob_vars_sim))
-        self._logger.info("fast.sim_programs(%s, %s) = %f" % (prog1.name, prog2.name, sim))
+        self._logger.info("fast.sim_programs(%s, %s) = %f" % (prog1.get_name(), prog2.get_name(), sim))
 
         return sim
 
@@ -44,26 +44,21 @@ class FastAnalyzer(Analyzer):
 
         # control types
         ctrl_type_sim = self._simimilarity_dicts(
-            func1.num_of_control_types(),
-            func2.num_of_control_types()
+            func1.get_numbers_of_controls(),
+            func2.get_numbers_of_controls()
         )
 
         # local variables
         loc_vars_sim = self._simimilarity_dicts(
-            func1.num_of_local_variables(),
-            func2.num_of_local_variables()
+            func1.get_numbers_of_local_vars(),
+            func2.get_numbers_of_local_vars()
         )
-
-        # return type
-        ret_type_sim = 1 if func1.ret_type.code() == func2.ret_type.code() else 0
-
-
-
+        
         sim = Config.get('fast.func_ctrl_type_power') * ctrl_type_sim
         sim += Config.get('fast.func_loc_vars_power') * loc_vars_sim
 
         self._logger.info("ctrl_type_sim = %f" % (ctrl_type_sim))
         self._logger.info("loc_vars_sim = %f" % (loc_vars_sim))
-        self._logger.info("fast.sim_functions(%s, %s) = %f" % (func1.name, func2.name, sim))
+        self._logger.info("fast.sim_functions(%s, %s) = %f" % (func1.get_name(), func2.get_name(), sim))
 
         return sim

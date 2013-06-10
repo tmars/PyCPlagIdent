@@ -1,67 +1,81 @@
-from struct_interface import FunctionBase, ProgramBase
+from struct import FunctionBase, ProgramBase
 
 class FunctionProxy(FunctionBase):
 
-    def __init__(self, _id, prog_id, name, ret_type, num_of_arguments_variables, num_of_control_types, seq_of_control_types, num_of_local_variables):
-        self.id = _id
-        self.prog_id = prog_id
-        self.name = name
-        self.ret_type = ret_type
-        self.__num_of_args = num_of_arguments_variables
-        self.__num_of_loc_vars = num_of_local_variables
-        self.__num_of_ctrl_types = num_of_control_types
-        self.__seq_of_ctrl_types = seq_of_control_types
+    def __init__(self, _id):
+        #super(FunctionProxy, self).__init__()
+        self._id = _id
+        self._numbers_of_controls = []
+        self._sequence_of_controls = []
+        self._numbers_of_arguments = []
+        self._numbers_of_local_vars = []
 
-    def name(self):
-        return self.name
+    def get_id(self):
+        return self._id
 
-    def ret_type(self):
-        return self.ret_type
+    def set_numbers_of_controls(self, numbers):
+        self._numbers_of_controls = numbers
 
-    def num_of_control_types(self):
-        return self.__num_of_ctrl_types
+    def get_numbers_of_controls(self):
+        return self._numbers_of_controls
 
-    def seq_of_control_types(self):
-        return self.__seq_of_ctrl_types
+    def set_sequence_of_controls(self, sequence):
+        self._sequence_of_controls = sequence
 
-    def num_of_local_variables(self):
-        return self.__num_of_loc_vars
+    def get_sequence_of_controls(self):
+        return self._sequence_of_controls
 
-    def num_of_arguments_variables(self):
-        return self.__num_of_args
+    def set_numbers_of_arguments(self, numbers):
+        self._numbers_of_arguments = numbers
+
+    def get_numbers_of_arguments(self):
+        return self._numbers_of_arguments
+
+    def set_numbers_of_local_vars(self, numbers):
+        self._numbers_of_local_vars = numbers
+
+    def get_numbers_of_local_vars(self):
+        return self._numbers_of_local_vars
 
 class ProgramProxy(ProgramBase):
-    def __init__(self, _id, name, source_code, num_of_headers, num_of_global_variables, num_of_control_types, num_of_local_variables, count_of_control_blocks):
-        self.id = _id
-        self.name = name
-        self.source_code = source_code
-        self.functions = []
-        self.__num_of_headers = num_of_headers
-        self.__num_of_glob_vars = num_of_global_variables
-        self.__num_of_ctrl_types = num_of_control_types
-        self.__num_of_loc_vars = num_of_local_variables
-        self.__num_of_ctrls = count_of_control_blocks
+    def __init__(self, _id):
+        super(ProgramProxy, self).__init__()
+        self._id = _id
+        self._numbers_of_headers = []
+        self._numbers_of_global_vars = []
+        self._numbers_of_controls = []
+        self._numbers_of_local_vars = []
+        self._count_of_controls = 0
 
-    def name(self):
-        return self.name
+    def get_id(self):
+        return self._id
 
-    def source_code(self):
-        return self.source_code
+    def set_numbers_of_headers(self, numbers):
+        self._numbers_of_headers = numbers
 
-    def functions(self):
-        return self.functions
+    def get_numbers_of_headers(self):
+        return self._numbers_of_headers
 
-    def num_of_headers(self):
-        return self.__num_of_headers
+    def set_numbers_of_global_vars(self, numbers):
+        self._numbers_of_global_vars = numbers
 
-    def num_of_global_variables(self):
-        return self.__num_of_glob_vars
+    def get_numbers_of_global_vars(self):
+        return self._numbers_of_global_vars
 
-    def num_of_control_types(self):
-        return self.__num_of_ctrl_types
+    def set_numbers_of_controls(self, numbers):
+        self._numbers_of_controls = numbers
 
-    def num_of_local_variables(self):
-        return self.__num_of_loc_vars
+    def get_numbers_of_controls(self):
+        return self._numbers_of_controls
 
-    def count_of_control_blocks(self):
-        return self.__num_of_ctrls
+    def set_numbers_of_local_vars(self, numbers):
+        self._numbers_of_local_vars = numbers
+
+    def get_numbers_of_local_vars(self):
+        return self._numbers_of_local_vars
+
+    def set_count_of_controls(self, count):
+        self._count_of_controls = count
+
+    def get_count_of_controls(self):
+        return self._count_of_controls

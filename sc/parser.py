@@ -84,7 +84,15 @@ class SCParser(object):
         generator = c_generator.CGenerator()
         source_code = generator.visit(ast)
 
-        program = Program(filename[len(prefix):], source_code, headers, scanner.functions, scanner.global_variables)
+        program = Program()
+        program.set_name(filename[len(prefix):])
+        program.set_source_code(source_code)
+        for header in headers:
+            program.add_header(header)
+        for function in scanner.functions:
+            program.add_function(function)
+        for var in scanner.global_vars:
+            program.add_global_var(var)
         return program
 
     @staticmethod
@@ -109,7 +117,7 @@ class AstVisitor(c_ast.NodeVisitor):
 
     def __init__(self):
         self.functions = []
-        self.global_variables = []
+        self.global_vars = []
         self.typedefs = {}
 
     def visit_FuncDef(self, node):
@@ -122,12 +130,16 @@ class AstVisitor(c_ast.NodeVisitor):
 
         block = self.build_block(BlockType.FUNCTION, node.body.block_items)
 
-        func = Function(node.decl.name, return_type, args, block)
+        func = Function(block)
+        func.set_name(node.decl.name)
+        func.set_return_type(return_type)
+        for arg in args:
+            func.add_argument(arg)
         self.functions.append(func)
 
     def visit_Decl(self, node):
         data_type = self.explain_type(node)
-        self.global_variables.append(data_type)
+        self.global_vars.append(data_type)
 
     def visit_Typedef(self, node):
         data_type = self.explain_type(node.type.type)
@@ -217,8 +229,9 @@ class AstVisitor(c_ast.NodeVisitor):
             blocks.append(self.build_block(BlockType.WHILE, decl.stmt))
 
         elif typ == c_ast.Label:
-            childs = self.build_blocks_tree(decl.stmt)
-            blocks.append(Block(BlockType.LABEL, [], childs))
+            block = Block(BlockType.LABEL)
+            block.add_child(self.build_blocks_tree(decl.stmt))
+            blocks.append(block)
 
         elif typ == c_ast.Goto:
             blocks.append(Block(BlockType.GOTO))
@@ -227,38 +240,38 @@ class AstVisitor(c_ast.NodeVisitor):
             blocks.append(Block(BlockType.INIT_LIST))
 
         elif typ == c_ast.Assignment:
-            childs = []
+            block = Block(BlockType.ASSIGNMENT)
             if not isinstance(decl.lvalue, c_ast.ID):
-                childs.extend(self.build_blocks_tree(decl.lvalue))
+                block.add_child(self.build_blocks_tree(decl.lvalue))
             if not isinstance(decl.rvalue, c_ast.ID):
-                childs.extend(self.build_blocks_tree(decl.rvalue))
-            blocks.append(Block(BlockType.ASSIGNMENT, [], childs))
+                block.add_child(self.build_blocks_tree(decl.rvalue))
+            blocks.append(block)
 
         elif typ == c_ast.Return:
-            childs = []
+            block = Block(BlockType.RETURN)
             if decl.expr and not isinstance(decl.expr, c_ast.ID):
-                childs.extend(self.build_blocks_tree(decl.expr))
-            blocks.append(Block(BlockType.RETURN, [], childs))
+                block.add_child(self.build_blocks_tree(decl.expr))
+            blocks.append(block)
 
         elif typ == c_ast.Cast:
-            childs = []
+            block = Block(BlockType.CAST)
             if not isinstance(decl.expr, c_ast.ID):
-                childs.extend(self.build_blocks_tree(decl.expr))
-            blocks.append(Block(BlockType.CAST, [], childs))
+                block.add_child(self.build_blocks_tree(decl.expr))
+            blocks.append(block)
 
         elif typ == c_ast.UnaryOp:
-            childs = []
+            block = Block(BlockType.UNARY_OP)
             if not isinstance(decl.expr, c_ast.ID):
-                childs.extend(self.build_blocks_tree(decl.expr))
-            blocks.append(Block(BlockType.UNARY_OP, [], childs))
+                block.add_child(self.build_blocks_tree(decl.expr))
+            blocks.append(block)
 
         elif typ == c_ast.BinaryOp:
-            childs = []
+            block = Block(BlockType.BINARY_OP)
             if not isinstance(decl.left, c_ast.ID):
-                childs.extend(self.build_blocks_tree(decl.left))
+                block.add_child(self.build_blocks_tree(decl.left))
             if not isinstance(decl.right, c_ast.ID):
-                childs.extend(self.build_blocks_tree(decl.right))
-            blocks.append(Block(BlockType.BINARY_OP, [], childs))
+                block.add_child(self.build_blocks_tree(decl.right))
+            blocks.append(block)
 
         elif typ == c_ast.TernaryOp:
             blocks.append(self.build_block(BlockType.TERNARY_OP, decl.iftrue))
@@ -266,10 +279,10 @@ class AstVisitor(c_ast.NodeVisitor):
                 blocks.append(self.build_block(BlockType.TERNARY_OP, decl.iffalse))
 
         elif typ == c_ast.FuncCall:
-            childs = []
+            block = Block(BlockType.FUNC_CALL)
             if decl.args and decl.args.exprs:
-                childs.extend(self.build_blocks_tree(decl.args.exprs))
-            blocks.append(Block(BlockType.FUNC_CALL, [], childs))
+                block.add_child(self.build_blocks_tree(decl.args.exprs))
+            blocks.append(block)
 
         elif typ == c_ast.ArrayRef:
             blocks.append(Block(BlockType.ARRAY_REF))
@@ -293,8 +306,9 @@ class AstVisitor(c_ast.NodeVisitor):
             pass
 
         elif typ == c_ast.ExprList:
-            childs = self.build_blocks_tree(decl.exprs)
-            blocks.append(Block(BlockType.EXPR_LIST, [], childs))
+            block = Block(BlockType.EXPR_LIST)
+            block.add_child(self.build_blocks_tree(decl.exprs))
+            blocks.append(block)
 
         elif typ == c_ast.Compound:
             blocks.extend(self.build_blocks_tree(decl.block_items))
@@ -311,20 +325,25 @@ class AstVisitor(c_ast.NodeVisitor):
 
         return blocks
 
-    def build_block(self, typ, blocks):
-        loc_vars = []
-        childs = []
+    def build_block(self, typ, decls):
+        local_vars = []
+        children = []
 
-        if isinstance(blocks, c_ast.Compound):
-            blocks = blocks.block_items
-        elif not isinstance(blocks, list):
-            blocks = [blocks]
-        if not(blocks == None):
-            for block in blocks:
-                if isinstance(block, c_ast.Decl):
-                    loc_vars.append(self.explain_type(block))
-                    if block.init:
-                        childs.extend(self.build_blocks_tree(block.init))
+        if isinstance(decls, c_ast.Compound):
+            decls = decls.block_items
+        elif not isinstance(decls, list):
+            decls = [decls]
+        if not(decls == None):
+            for decl in decls:
+                if isinstance(decl, c_ast.Decl):
+                    local_vars.append(self.explain_type(decl))
+                    if decl.init:
+                        children.extend(self.build_blocks_tree(decl.init))
                 else:
-                    childs.extend(self.build_blocks_tree(block, loc_vars))
-        return Block(typ, loc_vars, childs)
+                    children.extend(self.build_blocks_tree(decl, local_vars))
+        block = Block(typ)
+        for child in children:
+            block.add_child(children)
+        for var in local_vars:
+            block.add_local_var(var)
+        return block

@@ -109,16 +109,16 @@ if find_progs and target_progs:
     print u'Поиск схожих программ:'
 
     for target in target_progs:
-        print u'Поиск для программы [%s]...' % target.name
-        data = detector.find_sim_progs(target)
+        print u'Поиск для программы [%s]...' % target.get_name()
+        data = detector.find_sim_programs(target)
 
         if data:
-            print u'Схожые программы:'
+            print u'Схожие программы:'
             for prog,fast,detail in data:
-                print u'Программа [%s], схожесть = %.2f.' % (prog.name, detail)
+                print u'Программа [%s], схожесть = %.2f.' % (prog.get_name(), detail)
                 sim_progs.append({
-                    'p1': target.name,
-                    'p2': prog.name,
+                    'p1': target.get_name(),
+                    'p2': prog.get_name(),
                     'sim': detail,
                 })
 
@@ -134,25 +134,25 @@ if find_funcs and target_progs:
     print u'Поиск схожих функций:'
 
     for target_prog in target_progs:
-        for target in target_prog.functions:
+        for target in target_prog.get_functions():
 
-            print u'Поиск для функции [%s][%s]...' % (target_prog.name, target.name)
-            data = detector.find_sim_funcs(target)
+            print u'Поиск для функции [%s][%s]...' % (target_prog.get_name(), target.get_name())
+            data = detector.find_sim_functions(target)
             if data:
 
                 print u'Схожие функции:'
-                for prog,func,fast,detail in data:
-                    print u'Функция [%s][%s], схожесть = %.2f.' % (prog.name, func.name, detail)
+                for func,fast,detail in data:
+                    print u'Функция [%s][%s], схожесть = %.2f.' % (func.get_program().get_name(), func.get_name(), detail)
                 sim_funcs.append({
-                    'p1': target_prog.name,
-                    'f1': target.name,
-                    'p2': prog.name,
-                    'f2': func.name,
+                    'p1': target.get_program().get_name(),
+                    'f1': target.get_name(),
+                    'p2': func.get_program().get_name(),
+                    'f2': func.get_name(),
                     'sim': detail,
                 })
 
                 if output:
-                    print detector.extract_functions(target_prog, target, data, out_dir)
+                    print detector.extract_functions(target, data, out_dir)
             else:
                 print u'Не найдено.'
             print ''
@@ -179,13 +179,13 @@ if find_progs or find_funcs:
         if sim_progs:
             print u'Схожие программы:'
             for d in sim_progs:
-                print u'[%s] и [%s] на %0.2d%%' % (d['p1'], d['p2'], d['sim'] * 100)
+                print u'[%s] и [%s] на %.2f%%' % (d['p1'], d['p2'], d['sim'] * 100)
         print u''
 
         if sim_funcs:
             print u'Схожие функции:'
             for d in sim_funcs:
-                print u'[%s][%s] и [%s][%s] на %0.2d%%' % (d['p1'], d['f1'], d['p2'], d['f2'], d['sim'] * 100)
+                print u'[%s][%s] и [%s][%s] на %.2f%%' % (d['p1'], d['f1'], d['p2'], d['f2'], d['sim'] * 100)
         print u''
 
     else:

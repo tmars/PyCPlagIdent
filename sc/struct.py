@@ -5,14 +5,11 @@
 
 import sys, inspect
 from config_container import Config
-from struct_interface import FunctionBase, ProgramBase
+from abc import ABCMeta, abstractmethod, abstractproperty
 
 class Node(object):
     """ Базовый класс от которого наследуются все структуры программы
     """
-
-    def children(self):
-        pass
 
     def show(self, buf = sys.stdout, offset = 0, show_name = True):
         """ Используется для вывода структуры программы с учетом вложенности
@@ -72,7 +69,6 @@ class DataType(Node):
 
         'void': 16
     }
-    __max_types_count = 17
 
     def __init__(self):
         self.pointer_count = 0
@@ -94,22 +90,6 @@ class DataType(Node):
             self.is_enum,
             self.TYPES[typ] if self.TYPES.has_key(typ) else self.UNKNOW_TYPE
         )
-
-
-    """
-    @staticmethod
-    def get_codes():
-        codes = []
-        for pc in range(0, Config.get('max_pointer_count') + 1):
-            for fpc in range(0, Config.get('max_func_pointer_count') + 1):
-                for ac in range(0, Config.get('max_array_count') + 1):
-                    for is_s in range(0, 2):
-                        for is_u in range(0, 2):
-                            for is_e in range(0, 2):
-                                for tc in range(0, DataType.__max_types_count + 1):
-                                    codes.append("%d%d%d%d%d%d%02d" % (pc, fpc, ac, is_s, is_u, is_e, tc))
-        return codes
-    """
 
 class BlockType():
     GOTO = 0
@@ -139,61 +119,156 @@ class BlockType():
     CONTINUE = 24
     LABEL = 25
 
-    """
-    @staticmethod
-    def get_codes(codes = range(0, 26)):
-        return codes
-    """
-
 class Block(Node):
 
     _attr_names = {
-        'ControlType': 'control_type',
-        'LocalVariabes': 'local_variables',
-        'Children': 'childs'
+        'ControlType': 'get_control_type()',
+        'LocalVariabes': 'get_local_vars()',
+        'Children': 'get_children()'
     }
 
-    def __init__(self, ctrl_type, loc_vars = [], childs = []):
-        self.control_type = ctrl_type
-        self.local_variables = loc_vars
-        self.childs = childs
+    def __init__(self, control_type):
+        self._control_type = control_type
+        self._local_vars = []
+        self._children = []
 
-    def num_of_control_types(self, types = None):
-        types = {} if types == None else types
+    def get_control_type(self):
+        return self._control_type
 
-        if types.has_key(self.control_type):
-            types[self.control_type] += 1
+    def add_local_var(self, var):
+        self._local_vars.append(var)
+
+    def add_local_vars(self, vars):
+        self._local_vars.extend(vars)
+
+    def get_local_vars(self):
+        return self._local_vars
+
+    def add_child(self, child):
+        if isinstance(child, list):
+            self._children.extend(child)
         else:
-            types[self.control_type] = 1
+            self._children.append(child)
 
-        for child in self.childs:
-            child.num_of_control_types(types)
+    def get_children(self):
+        return self._children
 
+    def get_numbers_of_controls(self, types = None):
+        types = {} if types == None else types
+        control_type = self.get_control_type()
+        if types.has_key(control_type):
+            types[control_type] += 1
+        else:
+            types[control_type] = 1
+        for child in self.get_children():
+            child.get_numbers_of_controls(types)
         return types
 
-    def seq_of_control_types(self, types = None):
+    def get_sequence_of_controls(self, types = None):
         types = [] if types == None else types
-
-        types.append(self.control_type)
-
-        for child in self.childs:
-            child.seq_of_control_types(types)
-
+        types.append(self.get_control_type())
+        for child in self.get_children():
+            child.get_sequence_of_controls(types)
         return types
 
-    def num_of_local_variables(self, variables = None):
+    def get_numbers_of_local_vars(self, variables = None):
         variables = {} if variables == None else variables
-
-        for var in self.local_variables:
+        for var in self.get_local_vars():
             if variables.has_key(var.code()):
                 variables[var.code()] += 1
             else:
                 variables[var.code()] = 1
-
-        for child in self.childs:
-            child.num_of_local_variables(variables)
-
+        for child in self.get_children():
+            child.get_numbers_of_local_vars(variables)
         return variables
+
+class FunctionBase(object):
+    __metaclass__ = ABCMeta
+
+    def __init__(self):
+        self._name = 'unknow'
+        self._return_type = DataType()
+
+    def set_program(self, program):
+        self._program = program
+
+    def get_program(self):
+        return self._program
+
+    def set_name(self, name):
+        self._name = name
+
+    def get_name(self):
+        return self._name
+
+    def set_return_type(self, return_type):
+        self._return_type = return_type
+
+    def get_return_type(self):
+        return self._return_type
+
+    @abstractmethod
+    def get_numbers_of_controls(self):
+        """ Количество блоков каждого типа управления """
+
+    @abstractmethod
+    def get_sequence_of_controls(self):
+        """ Последовательность кодов типов управления как в программе """
+
+    @abstractmethod
+    def get_numbers_of_local_vars(self):
+        """ Количество локальных переменных по типам """
+
+    @abstractmethod
+    def get_numbers_of_arguments(self):
+        """ Количество аргументов по типам """
+
+class ProgramBase(object):
+    __metaclass__ = ABCMeta
+
+    def __init__(self):
+        self._name = 'unknow'
+        self._source_code = ''
+        self._functions = []
+
+    def set_name(self, name):
+        self._name = name
+
+    def get_name(self):
+        return self._name
+
+    def set_source_code(self, source_code):
+        self._source_code = source_code
+
+    def get_source_code(self):
+        return self._source_code
+
+    def add_function(self, function):
+        function.set_program(self)
+        self._functions.append(function)
+
+    def get_functions(self):
+        return self._functions
+
+    @abstractmethod
+    def get_numbers_of_headers(self):
+        """ Присутствие стандартных хедеровпо названию """
+
+    @abstractmethod
+    def get_numbers_of_global_vars(self):
+        """ Количество глобальных переменных по типам """
+
+    @abstractmethod
+    def get_numbers_of_controls(self):
+        """ Количество блоков каждого типа управления """
+
+    @abstractmethod
+    def get_numbers_of_local_vars(self):
+        """ Количество локальных переменных по типам """
+
+    @abstractmethod
+    def get_count_of_controls(self):
+        """ Количество всего контрольных блоков"""
 
 class Function(Node, FunctionBase):
 
@@ -204,38 +279,39 @@ class Function(Node, FunctionBase):
         'Block':'block'
     }
 
-    def __init__(self, name, ret_type, args, block):
-        self.name = name
-        self.ret_type = ret_type
-        self.args = args
-        self.block = block
+    def __init__(self, block):
+        super(Function, self).__init__()
+        self._program = Program()
+        self._arguments = []
+        self._block = block
 
-    def name(self):
-        return self.name
+    def add_argument(self, argument):
+        self._arguments.append(argument)
 
-    def ret_type(self):
-        return self.ret_type
+    def get_arguments(self):
+        return self._arguments
 
-    def num_of_control_types(self, types = None):
-        return self.block.num_of_control_types(types)
+    def get_numbers_of_controls(self, types = None):
+        return self._block.get_numbers_of_controls(types)
 
-    def seq_of_control_types(self, types = None):
-        return self.block.seq_of_control_types(types)
+    def get_sequence_of_controls(self, types = None):
+        return self._block.get_sequence_of_controls(types)
 
-    def num_of_local_variables(self, variables = None):
-        return self.block.num_of_local_variables(variables)
+    def get_numbers_of_local_vars(self, variables = None):
+        return self._block.get_numbers_of_local_vars(variables)
 
-    def num_of_arguments_variables(self, variables = None):
+    def get_numbers_of_arguments(self, variables = None):
         variables = {} if variables == None else variables
-
-        for var in self.args:
+        for var in self.get_arguments():
             if var:
                 if variables.has_key(var.code()):
                     variables[var.code()] += 1
                 else:
                     variables[var.code()] = 1
-
         return variables
+
+    def get_count_of_controls(self):
+        return len(self.get_sequence_of_controls())
 
 class Program(Node, ProgramBase):
 
@@ -245,62 +321,53 @@ class Program(Node, ProgramBase):
         'Functions': 'functions'
     }
 
-    def __init__(self, name, source_code, headers = [], funcs = [], glob_vars = []):
-        self.name = name
-        self.source_code = source_code
-        self.headers = headers
-        self.functions = funcs
-        self.global_variables = glob_vars
+    def __init__(self):
+        super(Program, self).__init__()
+        self._headers = []
+        self._global_vars = []
 
-    def name(self):
-        return self.name
+    def add_header(self, header):
+        self._headers.append(header)
 
-    def source_code(self):
-        return self.source_code
+    def get_headers(self):
+        return self._headers
 
-    def functions(self):
-        return self.functions
+    def add_global_var(self, var):
+        self._global_vars.append(var)
 
-    def num_of_headers(self):
+    def get_global_vars(self):
+        return self._global_vars
+
+    def get_numbers_of_headers(self):
         heads = {}
-
-        for head in self.headers:
+        for head in self.get_headers():
             heads[head] = 1
-
         return heads
 
-    def num_of_global_variables(self):
+    def get_numbers_of_global_vars(self):
         variables = {}
-
-        for var in self.global_variables:
+        for var in self.get_global_vars():
             if variables.has_key(var.code()):
                 variables[var.code()] += 1
             else:
                 variables[var.code()] = 1
-
         return variables
 
-    def num_of_control_types(self):
+    def get_numbers_of_controls(self):
         types = {}
-
-        for func in self.functions:
-            func.num_of_control_types(types)
-
+        for func in self.get_functions():
+            func.get_numbers_of_controls(types)
         return types
 
 
-    def num_of_local_variables(self):
+    def get_numbers_of_local_vars(self):
         variables = {}
-
-        for func in self.functions:
-            func.num_of_local_variables(variables)
-
+        for func in self.get_functions():
+            func.get_numbers_of_local_vars(variables)
         return variables
 
-    def count_of_control_blocks(self):
+    def get_count_of_controls(self):
         count = 0
-
-        for func in self.functions:
-            count += len(func.seq_of_control_types())
-
+        for func in self.get_functions():
+            count += len(func.get_sequence_of_controls())
         return count

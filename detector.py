@@ -38,15 +38,15 @@ class PlagiarismDetector(object):
         for obj in canditates:
             sim = sim_func(obj, target)
 
-            self.__logger.info("sim %s([%s], [%s]) = %f" % (type(obj), obj.name, target.name, sim))
+            self.__logger.info("sim %s([%s], [%s]) = %f" % (type(obj), obj.get_name(), target.get_name(), sim))
 
             if sim > min_sim_value:
                 result.append(obj)
 
         return result
 
-    #return [(prog, func, fast_similiraty, detailed_similiraty)]
-    def find_sim_funcs(self, target):
+    #return [(func, fast_similiraty, detailed_similiraty)]
+    def find_sim_functions(self, target):
         canditates = self.__func_canditates
 
         start = time.time()
@@ -59,15 +59,14 @@ class PlagiarismDetector(object):
 
         ret = []
         for func in result:
-            prog = self.__repo.get_program(func.prog_id)
             fast = self.__fast_analyzer.sim_functions(func, target)
             detailed = self.__detailed_analyzer.sim_functions(func, target)
-            ret.append((prog, func, fast, detailed))
+            ret.append((func, fast, detailed))
 
         return ret
 
     #return [(prog, fast_similiraty, detailed_similiraty)]
-    def find_sim_progs(self, target):
+    def find_sim_programs(self, target):
         canditates = self.__prog_canditates
 
         start = time.time()
@@ -75,7 +74,8 @@ class PlagiarismDetector(object):
         self.__logger.info("fast analyze from %d programs for %f detaileds" % (len(canditates), time.time() - start))
 
         for prog in primary:
-            prog.functions = self.__repo.get_functions(prog.id)
+            for func in self.__repo.get_functions(prog.get_id()):
+                prog.add_function(func)
 
         start = time.time()
         result = self.__select_result(primary, target, self.__detailed_analyzer.sim_programs, self.__detailed_min_sim)
@@ -100,7 +100,7 @@ class PlagiarismDetector(object):
         return self.__repo.info()
 
     def extract_programs(self, target, data, out_dir):
-        out_dir += "/" + target.name
+        out_dir += "/" + target.get_name()
         if not os.path.exists(out_dir):
             os.makedirs(out_dir)
 
@@ -109,8 +109,9 @@ class PlagiarismDetector(object):
 
         src = SCFileDecorator(filename_src)
         src.write_comment(["generated with %s %s" % (Config.get('package'), Config.get('version'))])
-        src.write_comment(["source code of", "target program=%s" % (target.name)])
-        src.write(self.__extracted_program(target))
+        src.write_comment(["source code of", "target program=%s" % (target.get_name())])
+        text = SCExtractor.extract_program(target.get_source_code())
+        src.write(text)
         src.write_comment(["end of source code"])
         del src
 
@@ -120,17 +121,18 @@ class PlagiarismDetector(object):
 
         for prog,f,s in data:
             src.write_comment([
-                "program=%s" % (target.name),
+                "program=%s" % (target.get_name()),
                 "f.sim=%f" % (f),
                 "s.sim=%f" % (s),
             ])
-            src.write(self.__extracted_program(prog))
-            src.write_comment(["end of program=%s" % (prog.name)])
+            text = SCExtractor.extract_program(prog.get_source_code())
+            src.write(text)
+            src.write_comment(["end of program=%s" % (prog.get_name())])
 
         del src
 
-    def extract_functions(self, target_prog, target, data, out_dir):
-        out_dir += "/%s/funcs/%s" % (target_prog.name, target.name)
+    def extract_functions(self, target, data, out_dir):
+        out_dir += "/%s/funcs/%s" % (target.get_program().get_name(), target.get_name())
         if not os.path.exists(out_dir):
             os.makedirs(out_dir)
 
@@ -139,8 +141,9 @@ class PlagiarismDetector(object):
 
         src = SCFileDecorator(filename_src)
         src.write_comment(["generated with %s %s" % (Config.get('package'), Config.get('version'))])
-        src.write_comment(["source code of", "target function=%s" % (target.name)])
-        src.write(self.__extracted_function(target_prog, target))
+        src.write_comment(["source code of", "target function=%s" % (target.get_name())])
+        text = SCExtractor.extract_function(target.get_program().get_source_code(), target.get_name())
+        src.write(text)
         src.write_comment(["end of source code"])
         del src
 
@@ -148,14 +151,15 @@ class PlagiarismDetector(object):
         src.write_comment(["generated with %s %s" % (Config.get('package'), Config.get('version'))])
         src.write_comment(["source code of", "similar functions"])
 
-        for prog,func,f,s in data:
+        for func,f,s in data:
             src.write_comment([
-                "program=%s" % (prog.name),
-                "function=%s" % (func.name),
+                "program=%s" % (func.get_program().get_name()),
+                "function=%s" % (func.get_name()),
                 "f.sim=%f" % (f),
                 "s.sim=%f" % (s)
             ])
-            src.write(self.__extracted_function(prog, func))
-            src.write_comment(["end of function=%s" % (func.name)])
+            text = SCExtractor.extract_function(func.get_program().get_source_code(), func.get_name())
+            src.write(text)
+            src.write_comment(["end of function=%s" % (func.get_name())])
 
         del src
