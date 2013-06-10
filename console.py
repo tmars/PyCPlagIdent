@@ -1,6 +1,6 @@
 #coding=utf8
 import sys, os, getopt
-import sc.parser as sc_parser
+from sc.parser import SCParser
 from sim_analyzer.detailed import DetailedAnalyzer
 from sim_analyzer.fast import FastAnalyzer
 from detector import PlagiarismDetector
@@ -15,6 +15,7 @@ save_program = False
 
 output = False
 out_dir = 'out'
+in_dir_prefix = 'c_files/'
 
 in_dir = None
 target_progs = None
@@ -67,14 +68,14 @@ for opt,arg in opts:
         output = True
 
     elif opt == '-i':
-        in_dir  = 'c_files/' + arg
+        in_dir  = in_dir_prefix + arg
         if os.path.exists(in_dir) == False:
             print u'Невозможно открыть папку [%s] с исходными кодами программ.' % in_dir
             sys.exit(0)
 
         else:
             print u'Поиск исходных текстов в папке [%s]...' % in_dir
-            target_progs = sc_parser.scan_for_programs(in_dir)
+            target_progs = SCParser.scan_for_programs(in_dir, in_dir_prefix)
             print u'Найдено %d программ.\r\n' % (len(target_progs))
 
     elif opt == '--db-clear':
@@ -97,13 +98,13 @@ fast_analizer.set_logger(logger)
 detailed_analizer = DetailedAnalyzer()
 detailed_analizer.set_logger(logger)
 
-repo = Repository()
+repo = Repository('data/db.db')
 detector = PlagiarismDetector(fast_analizer, detailed_analizer, repo)
 detector.set_logger(logger)
 detector.set_minimal_sim_values(0.5, 0.8)
 
 #####################################
-
+sim_progs = []
 if find_progs and target_progs:
     print u'Поиск схожих программ:'
 
@@ -115,6 +116,11 @@ if find_progs and target_progs:
             print u'Схожые программы:'
             for prog,fast,detail in data:
                 print u'Программа [%s], схожесть = %.2f.' % (prog.name, detail)
+                sim_progs.append({
+                    'p1': target.name,
+                    'p2': prog.name,
+                    'sim': detail,
+                })
 
             if output:
                 print detector.extract_programs(target, data, out_dir)
@@ -123,6 +129,7 @@ if find_progs and target_progs:
         print ''
     print u'Завершено.\r\n'
 
+sim_funcs = []
 if find_funcs and target_progs:
     print u'Поиск схожих функций:'
 
@@ -136,6 +143,13 @@ if find_funcs and target_progs:
                 print u'Схожие функции:'
                 for prog,func,fast,detail in data:
                     print u'Функция [%s][%s], схожесть = %.2f.' % (prog.name, func.name, detail)
+                sim_funcs.append({
+                    'p1': target_prog.name,
+                    'f1': target.name,
+                    'p2': prog.name,
+                    'f2': func.name,
+                    'sim': detail,
+                })
 
                 if output:
                     print detector.extract_functions(target_prog, target, data, out_dir)
@@ -157,4 +171,23 @@ if db_clear:
 if db_info:
     print u'Информация о базе данных:'
     print detector.info()
+    print u'Завершено.\r\n'
+
+if find_progs or find_funcs:
+    print u'Вывод:'
+    if sim_progs or sim_funcs:
+        if sim_progs:
+            print u'Схожие программы:'
+            for d in sim_progs:
+                print u'[%s] и [%s] на %0.2d%%' % (d['p1'], d['p2'], d['sim'] * 100)
+        print u''
+
+        if sim_funcs:
+            print u'Схожие функции:'
+            for d in sim_funcs:
+                print u'[%s][%s] и [%s][%s] на %0.2d%%' % (d['p1'], d['f1'], d['p2'], d['f2'], d['sim'] * 100)
+        print u''
+
+    else:
+        print u'Сходств не обнаружено'
     print u'Завершено.\r\n'

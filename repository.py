@@ -3,18 +3,18 @@ import sqlite3, os
 import cPickle
 from sc.struct_proxy import *
 
-db_path = "data\\db.db"
-
 class Repository(object):
 
-    def __init__(self):
-        self.db_path = os.path.abspath(os.curdir) + "\\" + db_path
+    def __init__(self, db_path):
+        self.db_path = db_path
 
         if not os.path.exists(self.db_path):
             self.__conn = sqlite3.connect(self.db_path)
             self.__deploy()
         else:
             self.__conn = sqlite3.connect(self.db_path)
+
+        self.__conn.text_factory = str
 
     def __del__(self):
         self.__conn.close()
@@ -69,8 +69,8 @@ class Repository(object):
             print self.db_path
             self.__conn.close()
             os.remove(self.db_path)
-
-        self.__init__()
+            self.__conn = sqlite3.connect(self.db_path)
+            self.__deploy()
 
     def info(self):
         c = self.__conn.cursor()

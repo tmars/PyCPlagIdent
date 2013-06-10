@@ -3,7 +3,7 @@
 from libs.pycparser import c_ast, c_parser, c_generator
 from config_container import Config
 import os
-from parser import parse_to_ast
+from parser import SCParser
 
 class FuncVisitor(c_ast.NodeVisitor):
     def __init__(self, func_name):
@@ -25,7 +25,7 @@ class SCExtractor(object):
         f.write(source_code)
         f.close()
 
-        ast = parse_to_ast(filename)
+        ast = SCParser.parse_to_ast(filename)
 
         os.remove(filename)
 

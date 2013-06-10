@@ -1,7 +1,7 @@
 #-----------------------------------------------------------------
 # pycparser: __init__.py
 #
-# This package file exports some convenience functions for 
+# This package file exports some convenience functions for
 # interacting with pycparser
 #
 # Copyright (C) 2008-2012, Eli Bendersky
@@ -12,7 +12,8 @@ __version__ = '2.09'
 
 from subprocess import Popen, PIPE
 from .c_parser import CParser
-
+import hashlib
+import os
 
 def preprocess_file(filename, cpp_path='cpp', cpp_args=''):
     """ Preprocess a file using cpp.
@@ -26,28 +27,22 @@ def preprocess_file(filename, cpp_path='cpp', cpp_args=''):
             arguments.
 
         When successful, returns the preprocessed file's contents.
-        Errors from cpp will be printed out. 
+        Errors from cpp will be printed out.
     """
     path_list = [cpp_path]
     if isinstance(cpp_args, list):
         path_list += cpp_args
-    elif cpp_args != '': 
+    elif cpp_args != '':
         path_list += [cpp_args]
     path_list += [filename]
 
-    try:
-        # Note the use of universal_newlines to treat all newlines
-        # as \n for Python's purpose
-        #
-        pipe = Popen(   path_list, 
-                        stdout=PIPE, 
-                        universal_newlines=True)
-        text = pipe.communicate()[0]
-    except OSError as e:
-        raise RuntimeError("Unable to invoke 'cpp'.  " +
-            'Make sure its path was passed correctly\n' +
-            ('Original error: %s' % e))
-
+    ferr = open('error.txt', 'w')
+    pipe = Popen(   path_list,
+                    stdout = PIPE,
+                    stderr = ferr,
+                    universal_newlines = True)
+    ferr.close()
+    text = pipe.communicate()[0]
     return text
 
 
@@ -77,10 +72,10 @@ def parse_file(filename, use_cpp=False, cpp_path='cpp', cpp_args='',
         parser:
             Optional parser object to be used instead of the default CParser
 
-        When successful, an AST is returned. ParseError can be 
+        When successful, an AST is returned. ParseError can be
         thrown if the file doesn't parse successfully.
 
-        Errors from cpp will be printed out. 
+        Errors from cpp will be printed out.
     """
     if use_cpp:
         text = preprocess_file(filename, cpp_path, cpp_args)
@@ -91,4 +86,3 @@ def parse_file(filename, use_cpp=False, cpp_path='cpp', cpp_args='',
     if parser is None:
         parser = CParser()
     return parser.parse(text, filename)
-

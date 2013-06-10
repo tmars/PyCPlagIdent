@@ -2,65 +2,107 @@
 import sys, re, os
 from struct import DataType, BlockType, Block, Function, Program
 from libs.pycparser import c_parser, c_ast, parse_file, c_generator
+import libs.chardet as chardet
 from config_container import Config
+import codecs
 
-def parse_to_ast(filename):
-    ast = parse_file(filename=filename,
-        use_cpp = True,
-        #cpp_path='cpp',
-        cpp_path='libs/pycparser/utils/cpp.exe',
-        cpp_args=r'-Ilibs/pycparser/utils/fake_libc_include'
-    )
-    return ast
+class SCParser(object):
 
-def scan_for_programs(dir, programs = []):
-    names = os.listdir(dir)
-    for name in names:
-        fullname = os.path.join(dir, name)
-        fn = dir + '/' + name
-        if (    os.path.isfile(fullname) and
-                fullname.split('.')[-1].lower() in ('c')):
-            program = parse_program(fn)
+    @staticmethod
+    def prepare_file(filename):
+        f = open(filename)
+        data = f.read()
+        f.close()
+
+        e = chardet.detect(data)
+
+        if (e['confidence'] == 0.99 and e['encoding'] == 'windows-1251'):
+            data = data.decode('cp1251').encode('utf-8')
+        elif (e['confidence'] == 1.0 and e['encoding'] == 'UTF-8'):
+            data = data.decode('utf-8-sig').encode('utf-8')
+
+        new_line = '\r\n\r\n'
+        if not data.endswith(new_line):
+            data += new_line
+
+        f = open(filename, 'w')
+        f.write(data)
+        f.close()
+
+    @staticmethod
+    def parse_to_ast(filename):
+        SCParser.prepare_file(filename)
+        ast = parse_file(filename = filename,
+            use_cpp = True,
+            cpp_path='libs/pycparser/utils/cpp.exe',
+            cpp_args=r'-Ilibs/pycparser/utils/fake_libc_include'
+        )
+        return ast
+
+    @staticmethod
+    def make_tree(dir):
+        tree = []
+        names = os.listdir(dir)
+        for name in names:
+            #fullname = os.path.join(dir, name)
+            fn = dir + '/' + name
+            if os.path.isfile(fn):
+                ext = fn.split('.')[-1].lower()
+                if ext == 'c':
+                    SCParser.prepare_file(fn)
+                    tree.append(fn)
+                elif ext == 'h':
+                    SCParser.prepare_file(fn)
+
+            elif os.path.isdir(fn):
+                tree.extend(SCParser.make_tree(fn))
+
+        return tree
+
+    @staticmethod
+    def scan_for_programs(dir, prefix = ''):
+        filenames = SCParser.make_tree(dir)
+        programs = []
+        for fn in filenames:
+            program = SCParser.parse_program(fn, prefix)
             programs.append(program)
+        return programs
 
-        elif os.path.isdir(fullname):
-            scan_for_programs(fn)
+    @staticmethod
+    def parse_program(filename, prefix = ''):
 
-    return programs
+        ast = SCParser.parse_to_ast(filename)
 
-def parse_program(filename):
+        scanner = AstVisitor()
+        scanner.visit(ast)
 
-    ast = parse_to_ast(filename)
+        headers = SCParser.parse_headers(filename)
 
-    scanner = SourceCodeParser()
-    scanner.visit(ast)
+        generator = c_generator.CGenerator()
+        source_code = generator.visit(ast)
 
-    headers = parse_headers(filename)
+        program = Program(filename[len(prefix):], source_code, headers, scanner.functions, scanner.global_variables)
+        return program
 
-    generator = c_generator.CGenerator()
-    source_code = generator.visit(ast)
+    @staticmethod
+    def parse_headers(filename):
+        headers = []
+        f = open(filename)
+        content = f.readlines()
+        for line in content:
+            if line.strip().startswith('#include'):
+                s = line.find('<')
+                if s == -1:
+                    s = line.find('"')
+                    f = line.find('\"', s+1)
+                else:
+                    f = line.find('>')
+                header = line[s+1:f]
+                if header in Config.get('standart_headers'):
+                    headers.append(header)
+        return headers
 
-    program = Program(filename, source_code, headers, scanner.functions, scanner.global_variables)
-    return program
-
-def parse_headers(filename):
-    headers = []
-    f = open(filename)
-    content = f.readlines()
-    for line in content:
-        if line.strip().startswith('#include'):
-            s = line.find('<')
-            if s == -1:
-                s = line.find('"')
-                f = line.find('\"', s+1)
-            else:
-                f = line.find('>')
-            header = line[s+1:f]
-            if header in Config.get('standart_headers'):
-                headers.append(header)
-    return headers
-
-class SourceCodeParser(c_ast.NodeVisitor):
+class AstVisitor(c_ast.NodeVisitor):
 
     def __init__(self):
         self.functions = []
