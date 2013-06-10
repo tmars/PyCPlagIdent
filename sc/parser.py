@@ -64,8 +64,11 @@ class SCParser(object):
         filenames = SCParser.make_tree(dir)
         programs = []
         for fn in filenames:
-            program = SCParser.parse_program(fn, prefix)
-            programs.append(program)
+            try:
+                program = SCParser.parse_program(fn, prefix)
+                programs.append(program)
+            except Exception as e:
+                print u'Ошибка при разборе файла %s' % (e)
         return programs
 
     @staticmethod
