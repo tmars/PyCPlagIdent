@@ -90,14 +90,16 @@ for opt,arg in opts:
 
 #####################################
 
-logger = Logger('data/log.log')
 
+logger = Logger('data/fast_analizer.log')
 fast_analizer = FastAnalyzer()
 fast_analizer.set_logger(logger)
 
+logger = Logger('data/detailed_analizer.log')
 detailed_analizer = DetailedAnalyzer()
 detailed_analizer.set_logger(logger)
 
+logger = Logger('data/detector.log')
 repo = Repository('data/db.db')
 detector = PlagiarismDetector(fast_analizer, detailed_analizer, repo)
 detector.set_logger(logger)

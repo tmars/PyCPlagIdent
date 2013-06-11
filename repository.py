@@ -16,6 +16,8 @@ class Repository(object):
             self.__conn = sqlite3.connect(self.db_path)
 
         self.__conn.text_factory = str
+        self.__functions = {}
+        self.__programs = {}
 
     def __del__(self):
         self.__conn.close()
@@ -122,20 +124,24 @@ class Repository(object):
         self.__conn.commit()
 
     def get_program(self, prog_id):
-        c = self.__conn.cursor()
+        if self.__programs.has_key(prog_id):
+            program = self.__programs[prog_id]
+        else:
+            c = self.__conn.cursor()
+            c.execute('''SELECT
+                id,
+                name,
+                source_code,
+                count_of_controls,
+                numbers_of_headers,
+                numbers_of_controls,
+                numbers_of_global_vars,
+                numbers_of_local_vars FROM program WHERE id = ?''', (prog_id,)
+            )
+            program = self.__unpack_prog_data(c.fetchone())
+            self.__programs[program.get_id()] = program
 
-        c.execute('''SELECT
-            id,
-            name,
-            source_code,
-            count_of_controls,
-            numbers_of_headers,
-            numbers_of_controls,
-            numbers_of_global_vars,
-            numbers_of_local_vars FROM program WHERE id = ?''', (prog_id,)
-        )
-
-        return self.__unpack_prog_data(c.fetchone())
+        return program
 
     def get_programs(self):
         c = self.__conn.cursor()
@@ -153,7 +159,12 @@ class Repository(object):
 
         programs = []
         for data in c.fetchall():
-            programs.append(self.__unpack_prog_data(data))
+            if self.__programs.has_key(data[0]):
+                program = self.__programs[data[0]]
+            else:
+                program = self.__unpack_prog_data(data)
+                self.__programs[program.get_id()] = program
+            programs.append(program)
 
         return programs
 
@@ -185,14 +196,18 @@ class Repository(object):
 
         functions = []
         for data in c.fetchall():
-            function = FunctionProxy(_id = data[0])
-            function.set_program(self.get_program(data[1]))
-            function.set_name(data[2])
-            function.set_return_type(cPickle.loads(str(data[3])))
-            function.set_numbers_of_local_vars(cPickle.loads(str(data[4])))
-            function.set_numbers_of_arguments(cPickle.loads(str(data[5])))
-            function.set_sequence_of_controls(cPickle.loads(str(data[6])))
-            function.set_numbers_of_controls(cPickle.loads(str(data[7])))
+            if self.__functions.has_key(data[0]):
+                function = self.__functions[data[0]]
+            else:
+                function = FunctionProxy(_id = data[0])
+                #function.set_program(self.get_program(data[1]))
+                function.set_name(data[2])
+                function.set_return_type(cPickle.loads(str(data[3])))
+                function.set_numbers_of_local_vars(cPickle.loads(str(data[4])))
+                function.set_numbers_of_arguments(cPickle.loads(str(data[5])))
+                function.set_sequence_of_controls(cPickle.loads(str(data[6])))
+                function.set_numbers_of_controls(cPickle.loads(str(data[7])))
+                self.__functions[function.get_id()] = function
 
             functions.append(function)
         return functions

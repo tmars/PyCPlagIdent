@@ -190,7 +190,8 @@ class FunctionBase(object):
         self._return_type = DataType()
 
     def set_program(self, program):
-        self._program = program
+        pass
+        #self._program = program
 
     def get_program(self):
         return self._program
@@ -244,7 +245,7 @@ class ProgramBase(object):
         return self._source_code
 
     def add_function(self, function):
-        function.set_program(self)
+        #function.set_program(self)
         self._functions.append(function)
 
     def get_functions(self):
