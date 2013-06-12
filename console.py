@@ -6,7 +6,7 @@ from sim_analyzer.fast import FastAnalyzer
 from detector import PlagiarismDetector
 from logger import Logger
 from repository import Repository
-
+from sc.struct import Program
 #####################################
 
 find_funcs = False
@@ -76,6 +76,19 @@ for opt,arg in opts:
         else:
             print u'Поиск исходных текстов в папке [%s]...' % in_dir
             target_progs = SCParser.scan_for_programs(in_dir, in_dir_prefix)
+            source_code = ''
+            headers = []
+            functions = []
+            global_variables = []
+            for prog in target_progs:
+                source_code += prog.source_code
+                for h in prog.headers:
+                    if headers.count(h) == 0:
+                        headers.append(h)
+                functions.extend(prog.functions)
+                global_variables.extend(prog.global_variables)
+            t = Program(arg, source_code, headers, functions, global_variables)
+            target_progs = [t]
             print u'Найдено %d программ.\r\n' % (len(target_progs))
 
     elif opt == '--db-clear':
@@ -90,14 +103,17 @@ for opt,arg in opts:
 
 #####################################
 
-logger = Logger('data/log.log')
 
+logger = Logger('data/fast_analizer.log')
 fast_analizer = FastAnalyzer()
 fast_analizer.set_logger(logger)
 
+
+logger = Logger('data/detailed_analizer.log')
 detailed_analizer = DetailedAnalyzer()
 detailed_analizer.set_logger(logger)
 
+logger = Logger('data/detector.log')
 repo = Repository('data/db.db')
 detector = PlagiarismDetector(fast_analizer, detailed_analizer, repo)
 detector.set_logger(logger)
