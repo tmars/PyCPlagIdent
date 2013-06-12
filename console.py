@@ -6,6 +6,7 @@ from sim_analyzer.fast import FastAnalyzer
 from detector import PlagiarismDetector
 from logger import Logger
 from repository import Repository
+import time
 
 #####################################
 
@@ -106,6 +107,7 @@ detector.set_minimal_sim_values(0.5, 0.8)
 #####################################
 sim_progs = []
 if find_progs and target_progs:
+    start = time.time()
     print u'Поиск схожих программ:'
 
     for target in target_progs:
@@ -128,9 +130,11 @@ if find_progs and target_progs:
             print u'Не найдено.'
         print ''
     print u'Завершено.\r\n'
+    find_progs_time = time.time() - start
 
 sim_funcs = []
 if find_funcs and target_progs:
+    start = time.time()
     print u'Поиск схожих функций:'
 
     for target_prog in target_progs:
@@ -157,6 +161,7 @@ if find_funcs and target_progs:
                 print u'Не найдено.'
             print ''
     print u'Завершено.\r\n'
+    find_funcs_time = time.time() - start
 
 if save_program and target_progs:
     print u'Сохранение программ в базе данных...'
@@ -177,13 +182,13 @@ if find_progs or find_funcs:
     print u'Вывод:'
     if sim_progs or sim_funcs:
         if sim_progs:
-            print u'Схожие программы:'
+            print u'Схожие программы: %f' % (find_progs_time)
             for d in sim_progs:
                 print u'[%s] и [%s] на %0.2d%%' % (d['p1'], d['p2'], d['sim'] * 100)
         print u''
 
         if sim_funcs:
-            print u'Схожие функции:'
+            print u'Схожие функции: %f' % (find_funcs_time)
             for d in sim_funcs:
                 print u'[%s][%s] и [%s][%s] на %0.2d%%' % (d['p1'], d['f1'], d['p2'], d['f2'], d['sim'] * 100)
         print u''
